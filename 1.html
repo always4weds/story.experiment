@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classic Clean Music Player</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: #ebedee; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        
+        .container { 
+            width: 380px; 
+            height: 550px; 
+            background: white; 
+            border-radius: 30px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1); 
+            position: relative; 
+            overflow: hidden; 
+        }
+
+        .page { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            padding: 40px 20px; 
+            transition: all 0.5s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            z-index: 1;
+        }
+
+        /* Login Page Styles */
+        #login-page { opacity: 1; transform: translateX(0); z-index: 2; }
+        #login-page.hidden { opacity: 0; transform: translateX(-100%); pointer-events: none; }
+
+        /* Player Page Styles */
+        #player-page { opacity: 0; transform: translateX(100%); z-index: 1; }
+        #player-page.active { opacity: 1; transform: translateX(0); z-index: 3; pointer-events: auto; }
+
+        .disk-container { width: 200px; height: 200px; margin: 30px 0; }
+        .disk { 
+            width: 100%; 
+            height: 100%; 
+            border-radius: 50%; 
+            background: #333; 
+            border: 8px solid #f0f0f0; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2); 
+            animation: spin 5s linear infinite; 
+            animation-play-state: paused; 
+        }
+        .disk.playing { animation-play-state: running; }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .controls { width: 100%; padding: 0 10px; }
+        .time-area { display: flex; justify-content: space-between; font-size: 13px; color: #7f8c8d; margin-bottom: 10px; }
+        
+        input[type="range"] { width: 100%; margin-bottom: 20px; cursor: pointer; accent-color: #6e8efb; }
+        
+        .play-pause-btn { 
+            width: 65px; 
+            height: 65px; 
+            border-radius: 50%; 
+            background: #6e8efb; 
+            border: none; 
+            color: white; 
+            font-size: 24px; 
+            cursor: pointer; 
+            box-shadow: 0 4px 10px rgba(110, 142, 251, 0.4);
+        }
+
+        .btn { 
+            background: #6e8efb; 
+            color: white; 
+            border: none; 
+            padding: 15px 40px; 
+            border-radius: 50px; 
+            cursor: pointer; 
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(110, 142, 251, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="login-page" class="page">
+            <h1 style="margin-bottom: 10px;">Welcome</h1>
+            <p style="margin-bottom: 30px; color: #7f8c8d;">Lively & Classic Style</p>
+            <button class="btn" onclick="goToPlayer()">Enter Player</button>
+        </div>
+
+        <div id="player-page" class="page">
+            <h2 style="margin-bottom: 10px;">Now Playing</h2>
+            <div class="disk-container">
+                <div class="disk" id="disk"></div>
+            </div>
+            <div class="controls">
+                <div class="time-area">
+                    <span id="current-time">0:00</span>
+                    <span id="remaining-time">-0:00</span>
+                </div>
+                <input type="range" id="seek-slider" value="0" min="0" step="0.1">
+                <button class="play-pause-btn" id="play-pause-btn" onclick="togglePlay()">&#9658;</button>
+            </div>
+            <audio id="audio-player" crossorigin="anonymous"></audio>
+        </div>
+    </div>
+
+    <script>
+        const audio = document.getElementById('audio-player');
+        const playBtn = document.getElementById('play-pause-btn');
+        const disk = document.getElementById('disk');
+        const seekSlider = document.getElementById('seek-slider');
+        
+        // Correct Archive.org Direct Link
+        const audioUrl = "https://archive.org/download/12_20260331_202603/edited%20audio%20ebook/1.mp3";
+        audio.src = audioUrl;
+
+        function goToPlayer() {
+            document.getElementById('login-page').classList.add('hidden');
+            document.getElementById('player-page').classList.add('active');
+            // বাটনে ক্লিক করলেই অডিও লোড হতে শুরু করবে
+            audio.load();
+        }
+
+        function togglePlay() {
+            if (audio.paused) {
+                audio.play().then(() => {
+                    playBtn.innerHTML = '&#10074;&#10074;';
+                    disk.classList.add('playing');
+                }).catch(err => {
+                    console.log("Error:", err);
+                    alert("অডিওটি লোড হচ্ছে। দয়া করে ৫ সেকেন্ড অপেক্ষা করে আবার ক্লিক করুন।");
+                });
+            } else {
+                audio.pause();
+                playBtn.innerHTML = '&#9658;';
+                disk.classList.remove('playing');
+            }
+        }
+
+        audio.addEventListener('timeupdate', () => {
+            if (!isNaN(audio.duration)) {
+                const current = audio.currentTime;
+                const duration = audio.duration;
+                document.getElementById('current-time').textContent = formatTime(current);
+                document.getElementById('remaining-time').textContent = "-" + formatTime(duration - current);
+                seekSlider.value = (current / duration) * 100;
+            }
+        });
+
+        seekSlider.addEventListener('input', () => {
+            if (audio.duration) {
+                audio.currentTime = (seekSlider.value / 100) * audio.duration;
+            }
+        });
+
+        function formatTime(sec) {
+            let m = Math.floor(sec / 60);
+            let s = Math.floor(sec % 60);
+            return `${m}:${s < 10 ? '0' + s : s}`;
+        }
+
+        // অডিও শেষ হলে ডিস্ক থামা এবং বাটন পাল্টানো
+        audio.onended = function() {
+            playBtn.innerHTML = '&#9658;';
+            disk.classList.remove('playing');
+        };
+    </script>
+</body>
+</html>
